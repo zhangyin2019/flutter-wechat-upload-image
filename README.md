@@ -3,6 +3,7 @@
 在实际APP开发中，像微博或者微信朋友圈的图片上传是必不可少的组件，经过封装，以此分享
 
 ### 使用方法
+* 先把upload_image.dart拷贝到自己的公共组件目录中
 * pubspec.yaml中安装
 ```java
 reorderable_grid: ^1.0.2
