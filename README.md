@@ -11,7 +11,6 @@ images_picker: ^1.2.7
 ```
 
 * 使用的地方
-注意：要达到微信图片预览的从小变大从图片位置直至满屏的效果，一定要加Hero
 ```dart
 Expanded(
     child: UploadImage(
@@ -24,7 +23,7 @@ Expanded(
 )),
 ```
 
-* 效果
+### 效果
 
 ![image](https://user-images.githubusercontent.com/49790909/149729567-4e5ea148-5bf4-4f96-b559-1f449968c977.png)
 ![image](https://user-images.githubusercontent.com/49790909/149729684-3297906f-8e6d-44ea-8698-b2dbfb10a3e8.png)
