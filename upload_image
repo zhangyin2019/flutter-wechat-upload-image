@@ -1,0 +1,212 @@
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:images_picker/images_picker.dart';
+
+import 'package:kxy_party/common.dart';
+import 'package:kxy_party/model/preview_model.dart';
+import 'package:kxy_party/model/result_model.dart';
+import 'package:kxy_party/model/upload_model.dart';
+import 'package:kxy_party/page/preview.dart';
+import 'package:kxy_party/util/urls.dart';
+import 'package:reorderable_grid/reorderable_grid.dart';
+
+class _UploadImage extends State<UploadImage> {
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ReorderableGridView.count(
+      shrinkWrap: true,
+      padding: widget.padding,
+      crossAxisCount: widget.crossAxisCount,
+      crossAxisSpacing: widget.crossAxisSpacing,
+      mainAxisSpacing: widget.mainAxisSpacing,
+      children: [
+        // 项
+        ...widget.imgList.asMap().entries.map((item) {
+          return Stack(
+            key: Key('${item.key}'),
+            fit: StackFit.expand,
+            clipBehavior: Clip.none,
+            children: [
+              // 图片
+              InkWell(
+                child: Hero(
+                  tag: '${item.key}',
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(Common.w_6),
+                    child: Image.network(
+                      item.value,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                onTap: () {
+                  final List<PreviewEntity> list = [];
+
+                  for (int i = 0, len = widget.imgList.length; i < len; i++) {
+                    list.add(
+                        PreviewEntity(id: '$i', imgUrl: widget.imgList[i]));
+                  }
+
+                  // 图片预览
+                  Common.pushFromFade(
+                      context,
+                      PreviewPage(
+                        imageUrlList: list,
+                        startIndex: item.key,
+                      ));
+
+                  //
+                },
+              ),
+
+              // 删除
+              Positioned(
+                  top: Common.t_2,
+                  right: Common.r_2,
+                  child: InkWell(
+                    child: Container(
+                      padding: Common.edge_4,
+                      decoration: BoxDecoration(
+                          color: Common.colEEE,
+                          borderRadius: BorderRadius.circular(Common.w_12)),
+                      child: const Icon(
+                        Common.iconClose,
+                        size: Common.size_12,
+                      ),
+                    ),
+                    onTap: () {
+                      Common.showConfirmDialog(context, content: '您确认删除？',
+                          confirmCallback: () {
+                        setState(() {
+                          widget.imgList.removeAt(item.key);
+                        });
+                      });
+                    },
+                  ))
+
+              //
+            ],
+          );
+        }),
+
+        // 上传
+        ...(widget.imgList.length < widget.maxUploadCount
+            ? [
+                InkWell(
+                  key: const Key('upload'),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Common.colEEE,
+                      borderRadius: BorderRadius.circular(Common.w_6),
+                    ),
+                    child: const Icon(
+                      Common.iconAdd,
+                      size: Common.size_24,
+                    ),
+                  ),
+                  onTap: () {
+                    Common.showSheet(context, ['拍照', '选择相册'])
+                        .then((value) async {
+                      switch (value) {
+                        case '拍照':
+                          final List<Media>? assets =
+                              await ImagesPicker.openCamera(
+                            pickType: PickType.image,
+                          );
+                          if (assets == null) return;
+
+                          final FormData formData = FormData.fromMap({
+                            'file': await MultipartFile.fromFile(assets[0].path)
+                          });
+
+                          Common.showLoading(context, title: "上传中..");
+
+                          final ResultModel<UploadModel> result =
+                              await Urls.mobilePartyUserUploadFile(formData);
+
+                          Navigator.of(context).pop();
+
+                          setState(() {
+                            widget.imgList.add(result.data!.url);
+                          });
+
+                          //
+                          break;
+                        case '选择相册':
+                          final List<Media>? assets = await ImagesPicker.pick(
+                            count:
+                                widget.maxUploadCount - widget.imgList.length,
+                            pickType: PickType.image,
+                          );
+                          if (assets == null) return;
+
+                          for (var item in assets) {
+                            final FormData formData = FormData.fromMap({
+                              'file': await MultipartFile.fromFile(item.path)
+                            });
+
+                            Common.showLoading(context, title: "上传中..");
+
+                            final ResultModel<UploadModel> result =
+                                await Urls.mobilePartyUserUploadFile(formData);
+
+                            Navigator.of(context).pop();
+
+                            setState(() {
+                              widget.imgList.add(result.data!.url);
+                            });
+                          }
+
+                          //
+                          break;
+                      }
+                    });
+
+                    //
+                  },
+                  onLongPress: () {},
+                )
+              ]
+            : []),
+
+        //
+      ],
+      onReorder: (int oldIndex, int newIndex) {
+        // 防止 和上传按钮换序
+        if (newIndex == widget.imgList.length) return;
+
+        final String tempUrl = widget.imgList.removeAt(oldIndex);
+        setState(() {
+          widget.imgList.insert(newIndex, tempUrl);
+        });
+      },
+    );
+  }
+}
+
+class UploadImage extends StatefulWidget {
+  final List<String> imgList;
+  final int maxUploadCount;
+
+  final EdgeInsets? padding;
+  final int crossAxisCount;
+  final double crossAxisSpacing;
+  final double mainAxisSpacing;
+
+  const UploadImage(
+      {this.imgList = const [],
+      this.maxUploadCount = 1,
+      this.padding,
+      this.crossAxisCount = 1,
+      this.crossAxisSpacing = 0.0,
+      this.mainAxisSpacing = 0.0})
+      : super(key: null);
+
+  @override
+  State<StatefulWidget> createState() => _UploadImage();
+}
